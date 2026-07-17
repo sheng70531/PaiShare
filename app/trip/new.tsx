@@ -30,6 +30,10 @@ export default function NewTripScreen() {
       return;
     }
     const id = createTrip(title || `行程 ${new Date().toLocaleDateString('zh-TW')}`, peoplePreview);
+    if (!id) {
+      Alert.alert('至少兩人', '分帳至少需要兩位成員。');
+      return;
+    }
     router.replace(`/trip/${id}`);
   };
 

@@ -15,6 +15,20 @@ import { useTripStore } from '@/storage/store';
 import type { TransferSuggestion } from '@/models/types';
 import { colors, fontSize, radii, space, type } from '@/theme/tokens';
 
+function marksMatchTransfers(
+  marks: { fromId: string; toId: string; amount: number; paid: boolean }[],
+  next: { fromId: string; toId: string; amount: number; paid: boolean }[],
+): boolean {
+  if (marks.length !== next.length) return false;
+  return next.every(
+    (n, i) =>
+      n.fromId === marks[i]?.fromId &&
+      n.toId === marks[i]?.toId &&
+      Math.round(n.amount * 100) === Math.round((marks[i]?.amount ?? 0) * 100) &&
+      n.paid === marks[i]?.paid,
+  );
+}
+
 export default function SettleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const trip = useTripStore((s) => s.trips.find((t) => t.id === id));
@@ -23,13 +37,14 @@ export default function SettleScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  // depend on people/expenses refs only — toggling paid must not recompute
   const transfers = useMemo(() => {
     if (!trip) return [] as TransferSuggestion[];
     return settleTrip(
       trip.people.map((p) => p.id),
       trip.expenses,
     );
-  }, [trip]);
+  }, [trip?.people, trip?.expenses]);
 
   const nameOf = (pid: string) => trip?.people.find((p) => p.id === pid)?.name ?? '?';
 
@@ -39,18 +54,19 @@ export default function SettleScreen() {
         m.paid &&
         m.fromId === t.fromId &&
         m.toId === t.toId &&
-        Math.abs(m.amount - t.amount) < 0.01,
+        Math.round(m.amount * 100) === Math.round(t.amount * 100),
     ) ?? false;
 
   useEffect(() => {
-    if (!trip) return;
-    // keep marks aligned with current suggestions (preserve paid flags when possible)
+    if (!id) return;
+    const current = useTripStore.getState().getTrip(id);
+    if (!current) return;
     const next = transfers.map((t) => {
-      const prev = trip.settlementMarks.find(
+      const prev = current.settlementMarks.find(
         (m) =>
           m.fromId === t.fromId &&
           m.toId === t.toId &&
-          Math.abs(m.amount - t.amount) < 0.01,
+          Math.round(m.amount * 100) === Math.round(t.amount * 100),
       );
       return {
         fromId: t.fromId,
@@ -59,17 +75,10 @@ export default function SettleScreen() {
         paid: prev?.paid ?? false,
       };
     });
-    const same =
-      next.length === trip.settlementMarks.length &&
-      next.every(
-        (n, i) =>
-          n.fromId === trip.settlementMarks[i]?.fromId &&
-          n.toId === trip.settlementMarks[i]?.toId &&
-          Math.abs(n.amount - (trip.settlementMarks[i]?.amount ?? 0)) < 0.01 &&
-          n.paid === trip.settlementMarks[i]?.paid,
-      );
-    if (!same) setSettlementMarks(trip.id, next);
-  }, [trip, transfers, setSettlementMarks]);
+    if (!marksMatchTransfers(current.settlementMarks, next)) {
+      setSettlementMarks(id, next);
+    }
+  }, [id, transfers, setSettlementMarks]);
 
   if (!trip) {
     return (

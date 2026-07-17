@@ -14,7 +14,6 @@ import { Field } from '@/components/Field';
 import { PersonPicker } from '@/components/PersonPicker';
 import { ScreenWash } from '@/components/ScreenWash';
 import { useTripStore } from '@/storage/store';
-import type { Expense } from '@/models/types';
 import { colors, fontSize, radii, space, type } from '@/theme/tokens';
 
 type Mode = 'split' | 'transfer';
@@ -74,49 +73,64 @@ export default function ExpenseFormScreen() {
   };
 
   const onSave = () => {
-    const amount = Number(amountText.replace(/,/g, ''));
+    const raw = Number(amountText.replace(/,/g, ''));
     if (!title.trim()) {
       Alert.alert('請填項目', '例如：午餐、飲料、打牌');
       return;
     }
-    if (!Number.isFinite(amount) || amount <= 0) {
+    if (!Number.isFinite(raw) || raw <= 0) {
       Alert.alert('金額無效', '請輸入大於 0 的數字');
       return;
     }
+    const amount = Math.round(raw * 100) / 100;
 
     if (mode === 'split') {
       if (!paidById || participantIds.length === 0) {
         Alert.alert('分攤不完整', '請選擇墊付人與至少一位分攤人');
         return;
       }
-      const payload: Omit<Extract<Expense, { type: 'split' }>, 'id' | 'createdAt'> = {
-        type: 'split',
-        title: title.trim(),
-        amount,
-        paidById,
-        participantIds,
-      };
       if (existing) {
-        updateExpense(trip.id, { ...existing, ...payload, type: 'split' });
+        updateExpense(trip.id, {
+          id: existing.id,
+          createdAt: existing.createdAt,
+          type: 'split',
+          title: title.trim(),
+          amount,
+          paidById,
+          participantIds,
+        });
       } else {
-        addExpense(trip.id, payload);
+        addExpense(trip.id, {
+          type: 'split',
+          title: title.trim(),
+          amount,
+          paidById,
+          participantIds,
+        });
       }
     } else {
       if (!fromId || !toId || fromId === toId) {
         Alert.alert('一對一無效', '請選擇不同的付款人與收款人');
         return;
       }
-      const payload: Omit<Extract<Expense, { type: 'transfer' }>, 'id' | 'createdAt'> = {
-        type: 'transfer',
-        title: title.trim(),
-        amount,
-        fromId,
-        toId,
-      };
       if (existing) {
-        updateExpense(trip.id, { ...existing, ...payload, type: 'transfer' });
+        updateExpense(trip.id, {
+          id: existing.id,
+          createdAt: existing.createdAt,
+          type: 'transfer',
+          title: title.trim(),
+          amount,
+          fromId,
+          toId,
+        });
       } else {
-        addExpense(trip.id, payload);
+        addExpense(trip.id, {
+          type: 'transfer',
+          title: title.trim(),
+          amount,
+          fromId,
+          toId,
+        });
       }
     }
     router.back();
@@ -149,6 +163,8 @@ export default function ExpenseFormScreen() {
       >
         <View style={styles.modeRow}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === 'split' }}
             onPress={() => setMode('split')}
             style={[styles.modeBtn, mode === 'split' && styles.modeOn]}
           >
@@ -157,6 +173,8 @@ export default function ExpenseFormScreen() {
             </Text>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === 'transfer' }}
             onPress={() => setMode('transfer')}
             style={[styles.modeBtn, mode === 'transfer' && styles.modeOn]}
           >

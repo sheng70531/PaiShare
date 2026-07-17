@@ -5,8 +5,11 @@ import type {
   Expense,
   Person,
   SettlementMark,
+  SplitExpense,
+  TransferExpense,
   Trip,
 } from '../models/types';
+import { tripAfterRemovingPerson } from '../lib/remove-person';
 
 const STORAGE_KEY = 'paishare-v1';
 
@@ -18,6 +21,10 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+type ExpenseInput =
+  | Omit<SplitExpense, 'id' | 'createdAt'>
+  | Omit<TransferExpense, 'id' | 'createdAt'>;
+
 type TripStore = {
   trips: Trip[];
   hydrated: boolean;
@@ -27,7 +34,7 @@ type TripStore = {
   deleteTrip: (tripId: string) => void;
   addPerson: (tripId: string, name: string) => void;
   removePerson: (tripId: string, personId: string) => void;
-  addExpense: (tripId: string, expense: Omit<Expense, 'id' | 'createdAt'>) => void;
+  addExpense: (tripId: string, expense: ExpenseInput) => void;
   updateExpense: (tripId: string, expense: Expense) => void;
   deleteExpense: (tripId: string, expenseId: string) => void;
   setSettlementMarks: (tripId: string, marks: SettlementMark[]) => void;
@@ -49,11 +56,12 @@ export const useTripStore = create<TripStore>()(
       getTrip: (tripId) => get().trips.find((t) => t.id === tripId),
 
       createTrip: (title, peopleNames) => {
-        const id = uid('trip');
         const people: Person[] = peopleNames
           .map((n) => n.trim())
           .filter(Boolean)
           .map((name) => ({ id: uid('p'), name }));
+        if (people.length < 2) return '';
+        const id = uid('trip');
         const trip: Trip = {
           id,
           title: title.trim() || '未命名行程',
@@ -91,17 +99,11 @@ export const useTripStore = create<TripStore>()(
 
       removePerson: (tripId, personId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) => ({
-            ...t,
-            people: t.people.filter((p) => p.id !== personId),
-            expenses: t.expenses.filter((e) => {
-              if (e.type === 'split') {
-                return e.paidById !== personId && !e.participantIds.includes(personId);
-              }
-              return e.fromId !== personId && e.toId !== personId;
-            }),
-            settlementMarks: [],
-          })),
+          trips: s.trips.map((t) => {
+            if (t.id !== tripId) return t;
+            const next = tripAfterRemovingPerson(t, personId);
+            return next ? { ...next, updatedAt: nowIso() } : t;
+          }),
         })),
 
       addExpense: (tripId, expense) =>
@@ -113,7 +115,7 @@ export const useTripStore = create<TripStore>()(
                 ...expense,
                 id: uid('exp'),
                 createdAt: nowIso(),
-              } as Expense,
+              },
               ...t.expenses,
             ],
             settlementMarks: [],
@@ -150,7 +152,9 @@ export const useTripStore = create<TripStore>()(
         set((s) => ({
           trips: mapTrip(s.trips, tripId, (t) => {
             const key = (m: SettlementMark) =>
-              m.fromId === fromId && m.toId === toId && Math.abs(m.amount - amount) < 0.01;
+              m.fromId === fromId &&
+              m.toId === toId &&
+              Math.round(m.amount * 100) === Math.round(amount * 100);
             const existing = t.settlementMarks.find(key);
             if (existing) {
               return {

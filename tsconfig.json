@@ -14,6 +14,7 @@
   ],
   "exclude": [
     "src/lib/settlement.selfcheck.ts",
+    "src/lib/remove-person.selfcheck.ts",
     "node_modules",
     ".venv"
   ]

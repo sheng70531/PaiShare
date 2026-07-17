@@ -1,8 +1,9 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View, type ViewProps } from 'react-native';
 import { colors } from '../theme/tokens';
 
 type Props = ViewProps & {
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 export function ScreenWash({ children, style, ...rest }: Props) {

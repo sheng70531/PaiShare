@@ -8,6 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test:settlement": "tsx src/lib/settlement.selfcheck.ts",
+    "test:lib": "tsx src/lib/settlement.selfcheck.ts && tsx src/lib/remove-person.selfcheck.ts",
     "activate": "powershell -NoExit -File .venv/Activate.ps1"
   },
   "dependencies": {

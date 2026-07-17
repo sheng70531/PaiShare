@@ -4,6 +4,7 @@ import {
   FlatList,
   Platform,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { ExpenseRow } from '@/components/ExpenseRow';
 import { ScreenWash } from '@/components/ScreenWash';
+import { impactOfRemovingPerson } from '@/lib/remove-person';
 import { useTripStore } from '@/storage/store';
 import type { Expense, Person } from '@/models/types';
 import { colors, fontSize, radii, space, type } from '@/theme/tokens';
@@ -23,10 +25,13 @@ export default function TripDetailScreen() {
   const trip = useTripStore((s) => s.trips.find((t) => t.id === id));
   const addPerson = useTripStore((s) => s.addPerson);
   const removePerson = useTripStore((s) => s.removePerson);
+  const updateTripTitle = useTripStore((s) => s.updateTripTitle);
   const deleteTrip = useTripStore((s) => s.deleteTrip);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [newName, setNewName] = useState('');
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
 
   const peopleById = useMemo(() => {
     const map: Record<string, Person> = {};
@@ -49,6 +54,53 @@ export default function TripDetailScreen() {
     if (!newName.trim()) return;
     addPerson(trip.id, newName);
     setNewName('');
+  };
+
+  const onStartRename = () => {
+    setTitleDraft(trip.title);
+    setEditingTitle(true);
+  };
+
+  const onCancelRename = () => {
+    setTitleDraft(trip.title);
+    setEditingTitle(false);
+  };
+
+  const onSaveTitle = () => {
+    updateTripTitle(trip.id, titleDraft);
+    setEditingTitle(false);
+  };
+
+  const onExport = async () => {
+    try {
+      await Share.share({
+        title: `PaiShare-${trip.title}`,
+        message: JSON.stringify(trip, null, 2),
+      });
+    } catch {
+      Alert.alert('匯出失敗', '無法開啟分享選單，請稍後再試。');
+    }
+  };
+
+  const onRemovePerson = (p: Person) => {
+    if (trip.people.length <= 2) {
+      Alert.alert('無法移除', '分帳至少需要兩位成員。');
+      return;
+    }
+    const { deleted, trimmed } = impactOfRemovingPerson(trip.expenses, p.id);
+    const parts: string[] = [];
+    if (deleted > 0) parts.push(`刪除 ${deleted} 筆支出`);
+    if (trimmed > 0) parts.push(`從 ${trimmed} 筆分攤名單移除`);
+    const detail =
+      parts.length > 0 ? `將會：${parts.join('、')}。` : '沒有相關支出。';
+    Alert.alert('移除成員', `移除 ${p.name}？${detail}`, [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '移除',
+        style: 'destructive',
+        onPress: () => removePerson(trip.id, p.id),
+      },
+    ]);
   };
 
   const onDeleteTrip = () => {
@@ -77,22 +129,51 @@ export default function TripDetailScreen() {
         ]}
         ListHeaderComponent={
           <View style={styles.header}>
+            {editingTitle ? (
+              <View style={styles.renameBlock}>
+                <TextInput
+                  value={titleDraft}
+                  onChangeText={setTitleDraft}
+                  style={styles.renameInput}
+                  autoFocus
+                  onSubmitEditing={onSaveTitle}
+                />
+                <View style={styles.renameActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={onCancelRename}
+                    style={styles.cancelBtn}
+                  >
+                    <Text style={styles.cancelBtnText}>取消</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={onSaveTitle}
+                    style={styles.addBtn}
+                  >
+                    <Text style={styles.addBtnText}>儲存</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="重新命名行程"
+                onPress={onStartRename}
+              >
+                <Text style={styles.renameHint}>重新命名</Text>
+              </Pressable>
+            )}
+
             <View style={styles.peopleBlock}>
               <Text style={styles.section}>成員</Text>
               <View style={styles.peopleRow}>
                 {trip.people.map((p) => (
                   <Pressable
                     key={p.id}
-                    onLongPress={() => {
-                      Alert.alert('移除成員', `移除 ${p.name}？相關支出也會刪除。`, [
-                        { text: '取消', style: 'cancel' },
-                        {
-                          text: '移除',
-                          style: 'destructive',
-                          onPress: () => removePerson(trip.id, p.id),
-                        },
-                      ]);
-                    }}
+                    accessibilityRole="button"
+                    accessibilityHint="長按可移除成員"
+                    onLongPress={() => onRemovePerson(p)}
                     style={styles.personChip}
                   >
                     <Text style={styles.personText}>{p.name}</Text>
@@ -108,11 +189,19 @@ export default function TripDetailScreen() {
                   style={styles.addInput}
                   onSubmitEditing={onAddPerson}
                 />
-                <Pressable onPress={onAddPerson} style={styles.addBtn}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onAddPerson}
+                  style={styles.addBtn}
+                >
                   <Text style={styles.addBtnText}>加入</Text>
                 </Pressable>
               </View>
-              <Text style={styles.hint}>長按成員可移除</Text>
+              <Text style={styles.hint}>
+                {trip.people.length <= 2
+                  ? '至少兩人；加人後才可長按移除'
+                  : '長按成員可移除'}
+              </Text>
             </View>
 
             <View style={styles.actions}>
@@ -146,9 +235,22 @@ export default function TripDetailScreen() {
         )}
         ItemSeparatorComponent={() => <View style={{ height: space[3] }} />}
         ListFooterComponent={
-          <Pressable onPress={onDeleteTrip} style={styles.deleteLink}>
-            <Text style={styles.deleteText}>刪除行程</Text>
-          </Pressable>
+          <View style={styles.footer}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onExport}
+              style={styles.exportLink}
+            >
+              <Text style={styles.exportText}>匯出 JSON 備份</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onDeleteTrip}
+              style={styles.deleteLink}
+            >
+              <Text style={styles.deleteText}>刪除行程</Text>
+            </Pressable>
+          </View>
         }
         removeClippedSubviews={Platform.OS === 'android'}
       />
@@ -162,6 +264,37 @@ const styles = StyleSheet.create({
     paddingTop: space[4],
   },
   header: { gap: space[4], marginBottom: space[3] },
+  renameBlock: { gap: space[2] },
+  renameActions: { flexDirection: 'row', gap: space[2], justifyContent: 'flex-end' },
+  renameInput: {
+    minHeight: 44,
+    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: space[3],
+    fontFamily: type.bodySemi,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  renameHint: {
+    fontFamily: type.bodyMed,
+    fontSize: fontSize.sm,
+    color: colors.mint,
+  },
+  cancelBtn: {
+    minWidth: 64,
+    minHeight: 44,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: space[3],
+  },
+  cancelBtnText: {
+    fontFamily: type.bodyMed,
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+  },
   peopleBlock: { gap: space[2] },
   section: {
     fontFamily: type.bodySemi,
@@ -219,7 +352,14 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     lineHeight: 20,
   },
-  deleteLink: { alignItems: 'center', paddingVertical: space[6] },
+  footer: { alignItems: 'center', paddingVertical: space[6], gap: space[4] },
+  exportLink: { paddingVertical: space[1] },
+  exportText: {
+    fontFamily: type.bodyMed,
+    fontSize: fontSize.sm,
+    color: colors.mint,
+  },
+  deleteLink: { paddingVertical: space[1] },
   deleteText: {
     fontFamily: type.bodyMed,
     fontSize: fontSize.sm,
