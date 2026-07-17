@@ -153,7 +153,8 @@ PaiShare/
 │   ├── storage/store.ts          # Zustand store
 │   └── theme/tokens.ts
 ├── assets/                       # icon / adaptive icon
-├── app.json                      # Expo 設定（scheme: paishare）
+├── app.config.js                 # Expo 設定（scheme: paishare；Pages 時 baseUrl）
+├── .github/workflows/            # GitHub Pages 自動部署
 ├── package.json
 └── README.md
 ```
@@ -212,9 +213,24 @@ npm start
 | `npm start` | Expo 開發伺服器 |
 | `npm run android` | 開 Android |
 | `npm run ios` | 開 iOS（需 macOS 或 Expo Go） |
-| `npm run web` | 瀏覽器 |
+| `npm run web` | 瀏覽器本機預覽 |
+| `npm run export:web` | 匯出靜態 web 到 `dist/` |
+| `npm run deploy` | 匯出並推到 `gh-pages` 分支（需已設 Pages） |
 | `npm run test:lib` | 領域邏輯 selfcheck |
 | `npm run test:settlement` | 僅結算 selfcheck |
+
+### GitHub Pages（網址免安裝）
+
+推送到 `master` 後，GitHub Actions 會自動建置 web 並部署。
+
+- **網址：** https://<your-github-username>.github.io/PaiShare/
+- **設定：** Repo → Settings → Pages → Source 選 **GitHub Actions**
+- 本機手動部署：`npm run deploy`（會寫入 `gh-pages` 分支；與 Actions 二選一即可，建議用 Actions）
+
+注意：
+
+- 資料仍存在**該瀏覽器本機**（非多人即時同步）
+- 動態行程路由為 SPA；Actions 已產生 `404.html` 作為重新整理後備
 
 ---
 
