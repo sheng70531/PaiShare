@@ -190,7 +190,7 @@ PaiShare/
 本專案使用目錄內可攜式 Node（`.venv`），不依賴系統全域安裝。
 
 ```powershell
-cd <project-directory>
+cd <專案目錄>
 .\\.venv\Activate.ps1
 ```
 
@@ -221,7 +221,7 @@ npm start
 
 ### GitHub Pages（網址免安裝）
 
-- **網址：** https://<your-github-username>.github.io/PaiShare/
+- **網址：** `https://<your-github-username>.github.io/PaiShare/`
 - **一鍵設定（只需一次）：** Repo → **Settings** → **Pages** → Source 選 **Deploy from a branch** → Branch 選 **`gh-pages`** / `/ (root)` → Save
 - 之後每次推 `master`，GitHub Actions 會自動重新匯出 web 並更新 `gh-pages`
 - 本機手動部署：`npm run deploy`
