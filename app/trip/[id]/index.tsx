@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   FlatList,
   Platform,
   Pressable,
@@ -15,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { ExpenseRow } from '@/components/ExpenseRow';
 import { ScreenWash } from '@/components/ScreenWash';
+import { showAlert } from '@/lib/alert';
 import { impactOfRemovingPerson } from '@/lib/remove-person';
 import { useTripStore } from '@/storage/store';
 import type { Expense, Person } from '@/models/types';
@@ -78,13 +78,13 @@ export default function TripDetailScreen() {
         message: JSON.stringify(trip, null, 2),
       });
     } catch {
-      Alert.alert('匯出失敗', '無法開啟分享選單，請稍後再試。');
+      showAlert('匯出失敗', '無法開啟分享選單，請稍後再試。');
     }
   };
 
   const onRemovePerson = (p: Person) => {
     if (trip.people.length <= 2) {
-      Alert.alert('無法移除', '分帳至少需要兩位成員。');
+      showAlert('無法移除', '分帳至少需要兩位成員。');
       return;
     }
     const { deleted, trimmed } = impactOfRemovingPerson(trip.expenses, p.id);
@@ -93,7 +93,7 @@ export default function TripDetailScreen() {
     if (trimmed > 0) parts.push(`從 ${trimmed} 筆分攤名單移除`);
     const detail =
       parts.length > 0 ? `將會：${parts.join('、')}。` : '沒有相關支出。';
-    Alert.alert('移除成員', `移除 ${p.name}？${detail}`, [
+    showAlert('移除成員', `移除 ${p.name}？${detail}`, [
       { text: '取消', style: 'cancel' },
       {
         text: '移除',
@@ -104,14 +104,15 @@ export default function TripDetailScreen() {
   };
 
   const onDeleteTrip = () => {
-    Alert.alert('刪除行程', '確定刪除？支出紀錄會一併清除。', [
+    showAlert('刪除行程', '確定刪除？支出紀錄會一併清除。', [
       { text: '取消', style: 'cancel' },
       {
         text: '刪除',
         style: 'destructive',
         onPress: () => {
-          deleteTrip(trip.id);
+          const tripId = trip.id;
           router.replace('/');
+          deleteTrip(tripId);
         },
       },
     ]);

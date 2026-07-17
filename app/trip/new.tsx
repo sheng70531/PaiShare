@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Field } from '@/components/Field';
 import { ScreenWash } from '@/components/ScreenWash';
+import { showAlert } from '@/lib/alert';
 import { useTripStore } from '@/storage/store';
 import { colors, fontSize, space, type } from '@/theme/tokens';
 
@@ -26,12 +27,12 @@ export default function NewTripScreen() {
 
   const onCreate = () => {
     if (peoplePreview.length < 2) {
-      Alert.alert('至少兩人', '分帳至少需要兩位成員。');
+      showAlert('至少兩人', '分帳至少需要兩位成員。');
       return;
     }
     const id = createTrip(title || `行程 ${new Date().toLocaleDateString('zh-TW')}`, peoplePreview);
     if (!id) {
-      Alert.alert('至少兩人', '分帳至少需要兩位成員。');
+      showAlert('至少兩人', '分帳至少需要兩位成員。');
       return;
     }
     router.replace(`/trip/${id}`);

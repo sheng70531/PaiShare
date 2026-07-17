@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,7 @@ import { Button } from '@/components/Button';
 import { Field } from '@/components/Field';
 import { PersonPicker } from '@/components/PersonPicker';
 import { ScreenWash } from '@/components/ScreenWash';
+import { showAlert } from '@/lib/alert';
 import { useTripStore } from '@/storage/store';
 import { colors, fontSize, radii, space, type } from '@/theme/tokens';
 
@@ -75,18 +75,18 @@ export default function ExpenseFormScreen() {
   const onSave = () => {
     const raw = Number(amountText.replace(/,/g, ''));
     if (!title.trim()) {
-      Alert.alert('請填項目', '例如：午餐、飲料、打牌');
+      showAlert('請填項目', '例如：午餐、飲料、打牌');
       return;
     }
     if (!Number.isFinite(raw) || raw <= 0) {
-      Alert.alert('金額無效', '請輸入大於 0 的數字');
+      showAlert('金額無效', '請輸入大於 0 的數字');
       return;
     }
     const amount = Math.round(raw * 100) / 100;
 
     if (mode === 'split') {
       if (!paidById || participantIds.length === 0) {
-        Alert.alert('分攤不完整', '請選擇墊付人與至少一位分攤人');
+        showAlert('分攤不完整', '請選擇墊付人與至少一位分攤人');
         return;
       }
       if (existing) {
@@ -110,7 +110,7 @@ export default function ExpenseFormScreen() {
       }
     } else {
       if (!fromId || !toId || fromId === toId) {
-        Alert.alert('一對一無效', '請選擇不同的付款人與收款人');
+        showAlert('一對一無效', '請選擇不同的付款人與收款人');
         return;
       }
       if (existing) {
@@ -138,7 +138,7 @@ export default function ExpenseFormScreen() {
 
   const onDelete = () => {
     if (!existing) return;
-    Alert.alert('刪除支出', '確定刪除這筆？', [
+    showAlert('刪除支出', '確定刪除這筆？', [
       { text: '取消', style: 'cancel' },
       {
         text: '刪除',
