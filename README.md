@@ -221,16 +221,15 @@ npm start
 
 ### GitHub Pages（網址免安裝）
 
-推送到 `master` 後，GitHub Actions 會自動建置 web 並部署。
-
 - **網址：** https://<your-github-username>.github.io/PaiShare/
-- **設定：** Repo → Settings → Pages → Source 選 **GitHub Actions**
-- 本機手動部署：`npm run deploy`（會寫入 `gh-pages` 分支；與 Actions 二選一即可，建議用 Actions）
+- **一鍵設定（只需一次）：** Repo → **Settings** → **Pages** → Source 選 **Deploy from a branch** → Branch 選 **`gh-pages`** / `/ (root)` → Save
+- 之後每次推 `master`，GitHub Actions 會自動重新匯出 web 並更新 `gh-pages`
+- 本機手動部署：`npm run deploy`
 
 注意：
 
 - 資料仍存在**該瀏覽器本機**（非多人即時同步）
-- 動態行程路由為 SPA；Actions 已產生 `404.html` 作為重新整理後備
+- 動態行程路由為 SPA；已產生 `404.html` 作為重新整理後備
 
 ---
 
