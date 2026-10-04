@@ -93,4 +93,33 @@ const baseTrip = (): Trip => ({
   assert.equal(tripAfterRemovingPerson(two, 'a'), null);
 }
 
+{
+  const ledger: Expense = {
+    id: '9',
+    type: 'ledger',
+    title: '牌',
+    createdAt: '',
+    lines: [
+      { personId: 'a', buyIn: 100, cashOut: 100 },
+      { personId: 'b', buyIn: 200, cashOut: 300 },
+      { personId: 'c', buyIn: 300, cashOut: 200 },
+    ],
+  };
+  const kept = expensesAfterRemovingPerson([ledger], 'a');
+  assert.equal(kept.length, 1);
+  assert.deepEqual(
+    (kept[0] as Extract<Expense, { type: 'ledger' }>).lines.map((l) => l.personId),
+    ['b', 'c'],
+  );
+  assert.deepEqual(impactOfRemovingPerson([ledger], 'a'), { deleted: 0, trimmed: 1 });
+
+  const dropped = expensesAfterRemovingPerson([ledger], 'c');
+  assert.deepEqual(dropped, []);
+  assert.deepEqual(impactOfRemovingPerson([ledger], 'c'), { deleted: 1, trimmed: 0 });
+
+  const absent = expensesAfterRemovingPerson([ledger], 'z');
+  assert.equal(absent.length, 1);
+  assert.equal((absent[0] as Extract<Expense, { type: 'ledger' }>).lines.length, 3);
+}
+
 console.log('remove-person.selfcheck: all passed');

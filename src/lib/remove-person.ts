@@ -1,6 +1,7 @@
 import type { Expense, Trip } from '../models/types';
+import { ledgerLineNetCents } from './settlement';
 
-/** Strip person from splits; drop expenses where they are payer or transfer party. */
+/** Strip person from splits; drop expenses where they are a payer, a transfer party, or a non-zero ledger line. */
 export function expensesAfterRemovingPerson(
   expenses: Expense[],
   personId: string,
@@ -13,8 +14,16 @@ export function expensesAfterRemovingPerson(
       if (participantIds.length === e.participantIds.length) return [e];
       return [{ ...e, participantIds }];
     }
-    if (e.fromId === personId || e.toId === personId) return [];
-    return [e];
+    if (e.type === 'transfer') {
+      if (e.fromId === personId || e.toId === personId) return [];
+      return [e];
+    }
+    const mine = e.lines.filter((l) => l.personId === personId);
+    if (mine.length === 0) return [e];
+    if (mine.some((l) => ledgerLineNetCents(l) !== 0)) return [];
+    const lines = e.lines.filter((l) => l.personId !== personId);
+    if (lines.length === 0) return [];
+    return [{ ...e, lines }];
   });
 }
 
@@ -34,6 +43,13 @@ export function impactOfRemovingPerson(expenses: Expense[], personId: string) {
       e.type === 'split' &&
       kept.type === 'split' &&
       kept.participantIds.length < e.participantIds.length
+    ) {
+      trimmed += 1;
+    }
+    if (
+      e.type === 'ledger' &&
+      kept.type === 'ledger' &&
+      kept.lines.length < e.lines.length
     ) {
       trimmed += 1;
     }

@@ -41,9 +41,14 @@ export default function HomeScreen() {
       <View style={[styles.hero, { paddingTop: insets.top + space[5] }]}>
         <Text style={styles.brand}>PaiShare</Text>
         <Text style={styles.tagline}>同行雜支，當天結束一次結清</Text>
-        <Link href="/trip/new" asChild>
-          <Button label="建立行程" style={styles.cta} />
-        </Link>
+        <View style={styles.heroActions}>
+          <Link href="/trip/new" asChild>
+            <Button label="建立行程" style={styles.cta} />
+          </Link>
+          <Link href="/stats" asChild>
+            <Button label="戰績" variant="secondary" style={styles.statsBtn} />
+          </Link>
+        </View>
       </View>
 
       <FlatList
@@ -86,10 +91,17 @@ const styles = StyleSheet.create({
     maxWidth: 280,
     lineHeight: 24,
   },
-  cta: {
-    alignSelf: 'flex-start',
+  heroActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space[3],
     marginTop: space[2],
+  },
+  cta: {
     backgroundColor: colors.mint,
+  },
+  statsBtn: {
+    backgroundColor: colors.white,
   },
   list: {
     paddingHorizontal: space[5],

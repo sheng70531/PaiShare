@@ -53,6 +53,7 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="stats" options={{ title: '戰績' }} />
         <Stack.Screen name="trip/new" options={{ title: '新行程' }} />
         <Stack.Screen name="trip/[id]/index" options={{ title: '行程' }} />
         <Stack.Screen name="trip/[id]/expense" options={{ title: '記一筆' }} />

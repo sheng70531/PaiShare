@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Expense, Person } from '../models/types';
-import { formatMoney } from '../lib/settlement';
+import { formatMoney, ledgerLineNetCents } from '../lib/settlement';
 import { colors, fontSize, radii, space, type } from '../theme/tokens';
 
 type Props = {
@@ -11,10 +11,23 @@ type Props = {
 
 export function ExpenseRow({ expense, peopleById, onPress }: Props) {
   const name = (id: string) => peopleById[id]?.name ?? '?';
-  const isTransfer = expense.type === 'transfer';
-  const subtitle = isTransfer
-    ? `${name(expense.fromId)} → ${name(expense.toId)}`
-    : `${name(expense.paidById)} 墊付 · ${expense.participantIds.length} 人分攤`;
+  const kind = expense.type === 'transfer' ? '一對一' : expense.type === 'ledger' ? '成績' : '均攤';
+  let subtitle = '';
+  let amount = 0;
+  if (expense.type === 'transfer') {
+    subtitle = `${name(expense.fromId)} → ${name(expense.toId)}`;
+    amount = expense.amount;
+  } else if (expense.type === 'split') {
+    subtitle = `${name(expense.paidById)} 墊付 · ${expense.participantIds.length} 人分攤`;
+    amount = expense.amount;
+  } else {
+    subtitle = `${expense.lines.length} 人上場`;
+    const cents = expense.lines.reduce((sum, line) => {
+      const net = ledgerLineNetCents(line);
+      return sum + (net > 0 ? net : 0);
+    }, 0);
+    amount = cents / 100;
+  }
 
   return (
     <Pressable
@@ -23,8 +36,17 @@ export function ExpenseRow({ expense, peopleById, onPress }: Props) {
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <View style={styles.left}>
-        <View style={[styles.badge, isTransfer ? styles.badgeTransfer : styles.badgeSplit]}>
-          <Text style={styles.badgeText}>{isTransfer ? '一對一' : '均攤'}</Text>
+        <View
+          style={[
+            styles.badge,
+            expense.type === 'transfer'
+              ? styles.badgeTransfer
+              : expense.type === 'ledger'
+                ? styles.badgeLedger
+                : styles.badgeSplit,
+          ]}
+        >
+          <Text style={styles.badgeText}>{kind}</Text>
         </View>
         <Text style={styles.title} numberOfLines={1}>
           {expense.title}
@@ -33,7 +55,7 @@ export function ExpenseRow({ expense, peopleById, onPress }: Props) {
           {subtitle}
         </Text>
       </View>
-      <Text style={styles.amount}>{formatMoney(expense.amount)}</Text>
+      <Text style={styles.amount}>{formatMoney(amount)}</Text>
     </Pressable>
   );
 }
@@ -60,6 +82,7 @@ const styles = StyleSheet.create({
   },
   badgeSplit: { backgroundColor: colors.mist },
   badgeTransfer: { backgroundColor: 'rgba(214, 90, 74, 0.12)' },
+  badgeLedger: { backgroundColor: 'rgba(201, 137, 42, 0.16)' },
   badgeText: {
     fontFamily: type.bodyMed,
     fontSize: fontSize.xs,

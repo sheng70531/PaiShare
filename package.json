@@ -11,7 +11,7 @@
     "predeploy": "cross-env GITHUB_PAGES=true expo export -p web",
     "deploy": "node scripts/prepare-gh-pages.js && gh-pages --nojekyll -d dist",
     "test:settlement": "tsx src/lib/settlement.selfcheck.ts",
-    "test:lib": "tsx src/lib/settlement.selfcheck.ts && tsx src/lib/remove-person.selfcheck.ts",
+    "test:lib": "tsx src/lib/settlement.selfcheck.ts && tsx src/lib/remove-person.selfcheck.ts && tsx src/lib/poker-record.selfcheck.ts",
     "activate": "powershell -NoExit -File .venv/Activate.ps1"
   },
   "dependencies": {

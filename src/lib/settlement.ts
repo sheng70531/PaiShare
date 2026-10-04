@@ -9,6 +9,11 @@ function fromCents(cents: number): number {
   return cents / 100;
 }
 
+/** Net of one ledger line in cents. Positive means that person should receive. */
+export function ledgerLineNetCents(line: { buyIn: number; cashOut: number }): number {
+  return Math.round(line.cashOut * 100) - Math.round(line.buyIn * 100);
+}
+
 /** Apply all expenses → net balance per person in dollars (positive = should receive). */
 export function computeBalances(
   personIds: string[],
@@ -30,11 +35,16 @@ export function computeBalances(
         if (rem > 0) rem -= 1;
         balances[pid] = (balances[pid] ?? 0) - share;
       }
-    } else {
+    } else if (expense.type === 'transfer') {
       const cents = toCents(expense.amount);
       if (cents <= 0 || expense.fromId === expense.toId) continue;
       balances[expense.fromId] = (balances[expense.fromId] ?? 0) - cents;
       balances[expense.toId] = (balances[expense.toId] ?? 0) + cents;
+    } else {
+      for (const line of expense.lines) {
+        const cents = ledgerLineNetCents(line);
+        balances[line.personId] = (balances[line.personId] ?? 0) + cents;
+      }
     }
   }
 
@@ -91,4 +101,11 @@ export function formatMoney(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })}`;
+}
+
+export function formatSignedMoney(amount: number): string {
+  const body = formatMoney(Math.abs(amount));
+  if (amount > 0) return `+${body}`;
+  if (amount < 0) return `−${body}`;
+  return body;
 }

@@ -1,6 +1,6 @@
 # PaiShare
 
-本機分帳 App（Android / iOS / Web，基於 Expo）。同行雜支、誰墊付、一對一特殊支出，結束後輸出「誰給誰多少」。
+本機分帳 App（Android / iOS / Web，基於 Expo）。同行雜支、誰墊付、打牌買入帶出，結束後輸出「誰給誰多少」。
 
 - **目前**：純本機、免登入，資料存在裝置（或瀏覽器）上  
 - **規劃中**：可選雲端同步（尚未實作）
@@ -11,11 +11,14 @@
 
 | 功能 | 說明 |
 |------|------|
-| 行程 | 建立／重新命名／刪除；成員至少 2 人 |
-| 成員 | 加人；長按移除（不可少於 2 人） |
+| 名單 | 同學建一次；每趟勾選。長按可改名，會同步到各行程 |
+| 行程 | 建立／重新命名／刪除；這一趟至少 2 人 |
+| 成員 | 從名單加入這一趟；長按移出（不可少於 2 人，名單仍保留） |
 | 均攤 | 誰墊、誰分攤；金額以「分」計算 |
-| 一對一 | 誰該付給誰（打牌、代買等） |
+| 一對一 | 誰該付給誰（代買等） |
+| 成績 | 填買入與帶出，淨額自動計算；加總須為 0 |
 | 結算 | 餘額沖銷 → 最少轉帳清單；可標記已付清 |
+| 戰績 | 跨行程，依同一人加總打牌淨勝、場次、勝負平 |
 | 備份 | 可匯出行程 JSON |
 
 ---
@@ -40,7 +43,7 @@
 app/（畫面）
   → src/storage/store.ts（Zustand，trips 為 SSOT）
        ├─ AsyncStorage
-       └─ src/lib/（純函式：settlement、remove-person）
+       └─ src/lib/（純函式：settlement、remove-person、roster、poker-record）
 ```
 
 無後端、無登入。結算與移除成員規則集中在 `src/lib/`，方便單測，避免與 UI 分叉。
@@ -50,7 +53,7 @@ app/（畫面）
 ```
 app/                 # Expo Router 畫面
 src/components/      # UI 元件
-src/lib/             # 結算、移除成員
+src/lib/             # 結算、移除成員、名單、戰績
 src/models/          # 型別
 src/storage/         # Zustand store
 src/theme/           # design tokens
@@ -60,8 +63,9 @@ src/theme/           # design tokens
 
 ### 資料模型（摘要）
 
-- `Trip`：成員、支出、結算已付清標記  
-- `Expense`：`split`（均攤）或 `transfer`（一對一）discriminated union  
+- `roster`：共用同學；行程成員沿用名單上的 id
+- `Trip`：這一趟的成員、支出、結算已付清標記
+- `Expense`：`split`（均攤）、`transfer`（一對一）或 `ledger`（買入／帶出）
 - 結算結果由現況支出衍生；變更支出／成員後會清空舊的已付清標記  
 
 ### 結算要点
@@ -97,7 +101,7 @@ npm start
 npm run test:lib
 ```
 
-涵蓋均攤、一對一、不可整除金額、移除成員等案例。修改 `src/lib/settlement.ts` 或 `remove-person.ts` 後請執行。
+涵蓋均攤、一對一、打牌成績、不可整除金額、移除成員、跨行程戰績等案例。修改 `src/lib/` 後請執行。
 
 ---
 

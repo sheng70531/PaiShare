@@ -6,10 +6,11 @@ type Props = {
   people: Person[];
   selectedIds: string[];
   onToggle: (id: string) => void;
+  onLongPress?: (id: string) => void;
   multi?: boolean;
 };
 
-export function PersonPicker({ people, selectedIds, onToggle, multi = true }: Props) {
+export function PersonPicker({ people, selectedIds, onToggle, onLongPress, multi = true }: Props) {
   return (
     <View style={styles.row}>
       {people.map((p) => {
@@ -19,7 +20,9 @@ export function PersonPicker({ people, selectedIds, onToggle, multi = true }: Pr
             key={p.id}
             accessibilityRole={multi ? 'checkbox' : 'radio'}
             accessibilityState={{ checked: on }}
+            accessibilityHint={onLongPress ? '長按可改名' : undefined}
             onPress={() => onToggle(p.id)}
+            onLongPress={onLongPress ? () => onLongPress(p.id) : undefined}
             style={[styles.chip, on && styles.chipOn]}
           >
             <Text style={[styles.chipText, on && styles.chipTextOn]}>{p.name}</Text>

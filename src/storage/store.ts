@@ -7,9 +7,11 @@ import type {
   SettlementMark,
   SplitExpense,
   TransferExpense,
+  LedgerExpense,
   Trip,
 } from '../models/types';
 import { tripAfterRemovingPerson } from '../lib/remove-person';
+import { mergeRoster } from '../lib/roster';
 
 const STORAGE_KEY = 'paishare-v1';
 
@@ -23,16 +25,20 @@ function nowIso(): string {
 
 type ExpenseInput =
   | Omit<SplitExpense, 'id' | 'createdAt'>
-  | Omit<TransferExpense, 'id' | 'createdAt'>;
+  | Omit<TransferExpense, 'id' | 'createdAt'>
+  | Omit<LedgerExpense, 'id' | 'createdAt'>;
 
 type TripStore = {
   trips: Trip[];
+  roster: Person[];
   hydrated: boolean;
   setHydrated: (v: boolean) => void;
-  createTrip: (title: string, peopleNames: string[]) => string;
+  createTrip: (title: string, personIds: string[]) => string;
   updateTripTitle: (tripId: string, title: string) => void;
   deleteTrip: (tripId: string) => void;
-  addPerson: (tripId: string, name: string) => void;
+  addClassmate: (name: string) => string;
+  renamePerson: (personId: string, name: string) => boolean;
+  addPersonToTrip: (tripId: string, personId: string) => void;
   removePerson: (tripId: string, personId: string) => void;
   addExpense: (tripId: string, expense: ExpenseInput) => void;
   updateExpense: (tripId: string, expense: Expense) => void;
@@ -50,16 +56,23 @@ export const useTripStore = create<TripStore>()(
   persist(
     (set, get) => ({
       trips: [],
+      roster: [],
       hydrated: false,
       setHydrated: (v) => set({ hydrated: v }),
 
       getTrip: (tripId) => get().trips.find((t) => t.id === tripId),
 
-      createTrip: (title, peopleNames) => {
-        const people: Person[] = peopleNames
-          .map((n) => n.trim())
-          .filter(Boolean)
-          .map((name) => ({ id: uid('p'), name }));
+      createTrip: (title, personIds) => {
+        const roster = get().roster;
+        const seen = new Set<string>();
+        const people: Person[] = [];
+        for (const id of personIds) {
+          if (seen.has(id)) continue;
+          const person = roster.find((p) => p.id === id);
+          if (!person) continue;
+          seen.add(id);
+          people.push({ id: person.id, name: person.name });
+        }
         if (people.length < 2) return '';
         const id = uid('trip');
         const trip: Trip = {
@@ -86,13 +99,41 @@ export const useTripStore = create<TripStore>()(
       deleteTrip: (tripId) =>
         set((s) => ({ trips: s.trips.filter((t) => t.id !== tripId) })),
 
-      addPerson: (tripId, name) => {
+      addClassmate: (name) => {
         const trimmed = name.trim();
-        if (!trimmed) return;
+        if (!trimmed) return '';
+        const existing = get().roster.find((p) => p.name === trimmed);
+        if (existing) return existing.id;
+        const person: Person = { id: uid('p'), name: trimmed };
+        set((s) => ({ roster: [...s.roster, person] }));
+        return person.id;
+      },
+
+      renamePerson: (personId, name) => {
+        const trimmed = name.trim();
+        if (!trimmed) return false;
+        const roster = get().roster;
+        if (!roster.some((p) => p.id === personId)) return false;
+        if (roster.some((p) => p.id !== personId && p.name === trimmed)) return false;
+        set((s) => ({
+          roster: s.roster.map((p) => (p.id === personId ? { ...p, name: trimmed } : p)),
+          trips: s.trips.map((t) => ({
+            ...t,
+            people: t.people.map((p) => (p.id === personId ? { ...p, name: trimmed } : p)),
+          })),
+        }));
+        return true;
+      },
+
+      addPersonToTrip: (tripId, personId) => {
+        const person = get().roster.find((p) => p.id === personId);
+        if (!person) return;
+        const trip = get().trips.find((t) => t.id === tripId);
+        if (!trip || trip.people.some((p) => p.id === personId)) return;
         set((s) => ({
           trips: mapTrip(s.trips, tripId, (t) => ({
             ...t,
-            people: [...t.people, { id: uid('p'), name: trimmed }],
+            people: [...t.people, { id: person.id, name: person.name }],
           })),
         }));
       },
@@ -178,9 +219,12 @@ export const useTripStore = create<TripStore>()(
       name: STORAGE_KEY,
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => (state) => {
-        state?.setHydrated(true);
+        if (!state) return;
+        const roster = mergeRoster(state.roster ?? [], state.trips ?? []);
+        useTripStore.setState({ roster });
+        state.setHydrated(true);
       },
-      partialize: (s) => ({ trips: s.trips }),
+      partialize: (s) => ({ trips: s.trips, roster: s.roster }),
     },
   ),
 );

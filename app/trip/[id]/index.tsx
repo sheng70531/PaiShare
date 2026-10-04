@@ -13,6 +13,8 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { ExpenseRow } from '@/components/ExpenseRow';
+import { Field } from '@/components/Field';
+import { PersonPicker } from '@/components/PersonPicker';
 import { ScreenWash } from '@/components/ScreenWash';
 import { showAlert } from '@/lib/alert';
 import { impactOfRemovingPerson } from '@/lib/remove-person';
@@ -23,13 +25,18 @@ import { colors, fontSize, radii, space, type } from '@/theme/tokens';
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const trip = useTripStore((s) => s.trips.find((t) => t.id === id));
-  const addPerson = useTripStore((s) => s.addPerson);
+  const roster = useTripStore((s) => s.roster);
+  const addClassmate = useTripStore((s) => s.addClassmate);
+  const addPersonToTrip = useTripStore((s) => s.addPersonToTrip);
+  const renamePerson = useTripStore((s) => s.renamePerson);
   const removePerson = useTripStore((s) => s.removePerson);
   const updateTripTitle = useTripStore((s) => s.updateTripTitle);
   const deleteTrip = useTripStore((s) => s.deleteTrip);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [newName, setNewName] = useState('');
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState('');
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
 
@@ -50,10 +57,31 @@ export default function TripDetailScreen() {
     );
   }
 
+  const available = roster.filter((p) => !trip.people.some((m) => m.id === p.id));
+
   const onAddPerson = () => {
-    if (!newName.trim()) return;
-    addPerson(trip.id, newName);
+    const personId = addClassmate(newName);
+    if (!personId) {
+      showAlert('請輸入名字', '新增同學需要一個名字。');
+      return;
+    }
+    addPersonToTrip(trip.id, personId);
     setNewName('');
+  };
+
+  const onStartPersonRename = (personId: string) => {
+    const person = roster.find((p) => p.id === personId);
+    setRenameId(personId);
+    setRenameText(person?.name ?? '');
+  };
+
+  const onRenamePerson = () => {
+    if (!renameId) return;
+    if (!renamePerson(renameId, renameText)) {
+      showAlert('無法改名', '名字是空的，或名單裡已經有這個人。');
+      return;
+    }
+    setRenameId(null);
   };
 
   const onStartRename = () => {
@@ -90,9 +118,9 @@ export default function TripDetailScreen() {
     const { deleted, trimmed } = impactOfRemovingPerson(trip.expenses, p.id);
     const parts: string[] = [];
     if (deleted > 0) parts.push(`刪除 ${deleted} 筆支出`);
-    if (trimmed > 0) parts.push(`從 ${trimmed} 筆分攤名單移除`);
+    if (trimmed > 0) parts.push(`從 ${trimmed} 筆支出的名單移除`);
     const detail =
-      parts.length > 0 ? `將會：${parts.join('、')}。` : '沒有相關支出。';
+      parts.length > 0 ? `將會：${parts.join('、')}。人仍留在名單上。` : '沒有相關支出。人仍留在名單上。';
     showAlert('移除成員', `移除 ${p.name}？${detail}`, [
       { text: '取消', style: 'cancel' },
       {
@@ -181,11 +209,33 @@ export default function TripDetailScreen() {
                   </Pressable>
                 ))}
               </View>
+              {available.length > 0 ? (
+                <PersonPicker
+                  people={available}
+                  selectedIds={[]}
+                  onToggle={(pid) => addPersonToTrip(trip.id, pid)}
+                  onLongPress={onStartPersonRename}
+                />
+              ) : (
+                <Text style={styles.hint}>名單上的人都在這一趟了。</Text>
+              )}
+              {renameId ? (
+                <View style={styles.renameBlock}>
+                  <Field label="改名" value={renameText} onChangeText={setRenameText} />
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={onRenamePerson}
+                    style={styles.addBtn}
+                  >
+                    <Text style={styles.addBtnText}>儲存名字</Text>
+                  </Pressable>
+                </View>
+              ) : null}
               <View style={styles.addPersonRow}>
                 <TextInput
                   value={newName}
                   onChangeText={setNewName}
-                  placeholder="加人"
+                  placeholder="新增同學"
                   placeholderTextColor={colors.textFaint}
                   style={styles.addInput}
                   onSubmitEditing={onAddPerson}
@@ -200,8 +250,8 @@ export default function TripDetailScreen() {
               </View>
               <Text style={styles.hint}>
                 {trip.people.length <= 2
-                  ? '至少兩人；加人後才可長按移除'
-                  : '長按成員可移除'}
+                  ? '至少兩人。點名單加入；長按名單可改名；長按上方成員可移出這一趟'
+                  : '點名單加入。長按名單可改名。長按上方成員可移出這一趟'}
               </Text>
             </View>
 
@@ -221,7 +271,7 @@ export default function TripDetailScreen() {
 
             <Text style={styles.section}>支出</Text>
             {trip.expenses.length === 0 ? (
-              <Text style={styles.empty}>還沒有支出。均可記均攤或一對一特殊支出。</Text>
+              <Text style={styles.empty}>還沒有支出。可記均攤、一對一或打牌成績。</Text>
             ) : null}
           </View>
         }

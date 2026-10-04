@@ -159,4 +159,49 @@ function sumBalances(bal: Record<string, number>): number {
   assert.ok(t.length >= 1);
 }
 
+// Ledger buy-in / cash-out, then the same table plus an even dinner split
+{
+  const ledger: Expense = {
+    id: '9',
+    type: 'ledger',
+    title: '牌',
+    createdAt: '',
+    lines: [
+      { personId: 'a', buyIn: 2000, cashOut: 3000 },
+      { personId: 'b', buyIn: 1000, cashOut: 1250 },
+      { personId: 'c', buyIn: 1500, cashOut: 770 },
+      { personId: 'd', buyIn: 1000, cashOut: 480 },
+    ],
+  };
+  const bal = computeBalances(ids('a', 'b', 'c', 'd'), [ledger]);
+  assert.equal(bal.a, 1000);
+  assert.equal(bal.b, 250);
+  assert.equal(bal.c, -730);
+  assert.equal(bal.d, -520);
+  assert.equal(sumBalances(bal), 0);
+  assert.deepEqual(settleBalances(bal), [
+    { fromId: 'c', toId: 'a', amount: 730 },
+    { fromId: 'd', toId: 'a', amount: 270 },
+    { fromId: 'd', toId: 'b', amount: 250 },
+  ]);
+
+  const mixed: Expense[] = [
+    ledger,
+    {
+      id: '10',
+      type: 'split',
+      title: '晚餐',
+      amount: 800,
+      paidById: 'a',
+      participantIds: ['a', 'b', 'c', 'd'],
+      createdAt: '',
+    },
+  ];
+  assert.deepEqual(settleTrip(ids('a', 'b', 'c', 'd'), mixed), [
+    { fromId: 'c', toId: 'a', amount: 930 },
+    { fromId: 'd', toId: 'a', amount: 670 },
+    { fromId: 'd', toId: 'b', amount: 50 },
+  ]);
+}
+
 console.log('settlement.selfcheck: all passed');

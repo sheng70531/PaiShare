@@ -23,7 +23,21 @@ export type TransferExpense = {
   createdAt: string;
 };
 
-export type Expense = SplitExpense | TransferExpense;
+export type LedgerLine = {
+  personId: string;
+  buyIn: number;
+  cashOut: number;
+};
+
+export type LedgerExpense = {
+  id: string;
+  type: 'ledger';
+  title: string;
+  lines: LedgerLine[];
+  createdAt: string;
+};
+
+export type Expense = SplitExpense | TransferExpense | LedgerExpense;
 
 export type SettlementMark = {
   fromId: string;
