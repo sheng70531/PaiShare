@@ -1,5 +1,15 @@
 import assert from 'node:assert/strict';
-import { computeBalances, settleBalances, settleTrip } from './settlement';
+import {
+  balancingNetCents,
+  computeBalances,
+  formatNetDraft,
+  formatSettlementText,
+  ledgerLineNetCents,
+  netCentsToLedgerLine,
+  parseNetDraft,
+  settleBalances,
+  settleTrip,
+} from './settlement';
 import type { Expense } from '../models/types';
 
 function ids(...names: string[]) {
@@ -202,6 +212,65 @@ function sumBalances(bal: Record<string, number>): number {
     { fromId: 'd', toId: 'a', amount: 670 },
     { fromId: 'd', toId: 'b', amount: 50 },
   ]);
+}
+
+// Net-only ledger entry: last blank person balances the table
+{
+  const entries = [
+    { id: 'a', cents: 40000 },
+    { id: 'b', cents: -20000 },
+    { id: 'c', cents: -10000 },
+    { id: 'd', cents: null },
+  ];
+  assert.deepEqual(balancingNetCents(entries), { id: 'd', cents: -10000 });
+  assert.equal(balancingNetCents([...entries, { id: 'e', cents: null }]), null);
+  assert.equal(
+    balancingNetCents([
+      { id: 'a', cents: 100 },
+      { id: 'b', cents: -100 },
+      { id: 'c', cents: null },
+    ]),
+    null,
+  );
+
+  const line = netCentsToLedgerLine('d', -10000);
+  assert.deepEqual(line, { personId: 'd', buyIn: 100, cashOut: 0 });
+  assert.equal(ledgerLineNetCents(line), -10000);
+  assert.equal(formatNetDraft(-10050), '-100.5');
+  assert.deepEqual(parseNetDraft('-100.5'), { kind: 'value', cents: -10050 });
+  assert.deepEqual(parseNetDraft(''), { kind: 'empty' });
+  assert.deepEqual(parseNetDraft('-'), { kind: 'partial' });
+  assert.deepEqual(parseNetDraft('1.'), { kind: 'partial' });
+  assert.deepEqual(parseNetDraft('abc'), { kind: 'invalid' });
+
+  const lines = [
+    netCentsToLedgerLine('a', 40000),
+    netCentsToLedgerLine('b', -20000),
+    netCentsToLedgerLine('c', -10000),
+    line,
+  ];
+  const bal = computeBalances(ids('a', 'b', 'c', 'd'), [
+    { id: '11', type: 'ledger', title: '淨額', createdAt: '', lines },
+  ]);
+  assert.equal(bal.a, 400);
+  assert.equal(bal.d, -100);
+  assert.equal(sumBalances(bal), 0);
+}
+
+{
+  const nameOf = (id: string) => ({ a: '甲', b: '乙', c: '丙' })[id] ?? '?';
+  assert.equal(
+    formatSettlementText(
+      '今晚',
+      [
+        { fromId: 'b', toId: 'a', amount: 200 },
+        { fromId: 'c', toId: 'a', amount: 100 },
+      ],
+      nameOf,
+    ),
+    '今晚\n乙給甲 $200、丙給甲 $100',
+  );
+  assert.equal(formatSettlementText('今晚', [], nameOf), '今晚\n帳已平');
 }
 
 console.log('settlement.selfcheck: all passed');

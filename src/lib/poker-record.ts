@@ -62,3 +62,51 @@ export function summarizePoker(trips: Trip[], roster: Person[]): PokerSummary[] 
   });
   return out;
 }
+
+export type PokerSheetSession = {
+  id: string;
+  label: string;
+  /** Dollars. Absent person did not play that session. */
+  nets: Record<string, number>;
+};
+
+export type PokerSheet = {
+  people: { personId: string; name: string; net: number }[];
+  sessions: PokerSheetSession[];
+};
+
+/** One row per ledger expense, oldest first. People follow the summary ranking. */
+export function pokerSheet(trips: Trip[], roster: Person[]): PokerSheet {
+  const people = summarizePoker(trips, roster).map((row) => ({
+    personId: row.personId,
+    name: row.name,
+    net: row.net,
+  }));
+
+  const raw: { key: string; label: string; nets: Record<string, number>; sort: string }[] = [];
+  trips.forEach((trip, tripIndex) => {
+    trip.expenses.forEach((expense, expenseIndex) => {
+      if (expense.type !== 'ledger' || expense.lines.length === 0) return;
+      const centsById: Record<string, number> = {};
+      for (const line of expense.lines) {
+        centsById[line.personId] = (centsById[line.personId] ?? 0) + ledgerLineNetCents(line);
+      }
+      const nets: Record<string, number> = {};
+      for (const [personId, cents] of Object.entries(centsById)) nets[personId] = cents / 100;
+      const label = trip.title === expense.title ? trip.title : `${trip.title} · ${expense.title}`;
+      const when = expense.createdAt || trip.createdAt;
+      raw.push({
+        key: `${trip.id}:${expense.id}`,
+        label,
+        nets,
+        sort: when ? `${when}` : `${String(tripIndex).padStart(6, '0')}:${String(expenseIndex).padStart(6, '0')}`,
+      });
+    });
+  });
+
+  raw.sort((a, b) => (a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : 0));
+  return {
+    people,
+    sessions: raw.map(({ key, label, nets }) => ({ id: key, label, nets })),
+  };
+}

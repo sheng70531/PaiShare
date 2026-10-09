@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  Clipboard,
   FlatList,
   Pressable,
   StyleSheet,
@@ -10,7 +11,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { ScreenWash } from '@/components/ScreenWash';
-import { formatMoney, settleTrip } from '@/lib/settlement';
+import { formatMoney, formatSettlementText, settleTrip } from '@/lib/settlement';
 import { useTripStore } from '@/storage/store';
 import type { TransferSuggestion } from '@/models/types';
 import { colors, fontSize, radii, space, type } from '@/theme/tokens';
@@ -36,6 +37,7 @@ export default function SettleScreen() {
   const toggleSettlementPaid = useTripStore((s) => s.toggleSettlementPaid);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [copied, setCopied] = useState(false);
 
   // depend on people/expenses refs only — toggling paid must not recompute
   const transfers = useMemo(() => {
@@ -80,6 +82,12 @@ export default function SettleScreen() {
     }
   }, [id, transfers, setSettlementMarks]);
 
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
   if (!trip) {
     return (
       <View style={styles.missing}>
@@ -104,6 +112,17 @@ export default function SettleScreen() {
             <Text style={styles.lead}>
               已把均攤與一對一債權沖銷成最少筆轉帳。點一下可標記已付清。
             </Text>
+            <Button
+              label={copied ? '已複製' : '複製'}
+              variant="secondary"
+              onPress={() => {
+                // ponytail: RN Clipboard still ships in Expo Go; upgrade path is expo-clipboard when this export is removed.
+                Clipboard.setString(
+                  formatSettlementText(trip.title, transfers, nameOf),
+                );
+                setCopied(true);
+              }}
+            />
             {transfers.length === 0 ? (
               <View style={styles.zeroBox}>
                 <Text style={styles.zeroTitle}>帳已平</Text>

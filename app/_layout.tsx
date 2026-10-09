@@ -1,12 +1,27 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Stack } from 'expo-router';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ColorValue } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTripStore } from '@/storage/store';
 import { colors, type } from '@/theme/tokens';
+
+function HomeBackButton({ tintColor }: { tintColor?: ColorValue }) {
+  const router = useRouter();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="回首頁"
+      onPress={() => router.replace('/')}
+      hitSlop={8}
+      style={styles.homeBack}
+    >
+      <Text style={[styles.homeBackGlyph, { color: tintColor ?? colors.ink }]}>←</Text>
+    </Pressable>
+  );
+}
 
 export default function RootLayout() {
   const hydrated = useTripStore((s) => s.hydrated);
@@ -41,7 +56,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.flex}>
       <StatusBar style="dark" />
       <Stack
-        screenOptions={{
+        screenOptions={({ navigation }) => ({
           headerShadowVisible: false,
           headerTintColor: colors.ink,
           headerStyle: { backgroundColor: colors.paper },
@@ -50,7 +65,11 @@ export default function RootLayout() {
             color: colors.ink,
           },
           contentStyle: { backgroundColor: colors.paper },
-        }}
+          // Direct URL or refresh has no stack history, so the default back button stays hidden.
+          ...(!navigation.canGoBack()
+            ? { headerLeft: ({ tintColor }: { tintColor?: ColorValue }) => <HomeBackButton tintColor={tintColor} /> }
+            : {}),
+        })}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="stats" options={{ title: '戰績' }} />
@@ -77,5 +96,15 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     color: colors.ink,
+  },
+  homeBack: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeBackGlyph: {
+    fontSize: 22,
+    lineHeight: 26,
   },
 });

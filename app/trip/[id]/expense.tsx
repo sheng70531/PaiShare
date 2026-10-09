@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,21 +15,19 @@ import { Field } from '@/components/Field';
 import { PersonPicker } from '@/components/PersonPicker';
 import { ScreenWash } from '@/components/ScreenWash';
 import { showAlert } from '@/lib/alert';
-import { formatMoney, formatSignedMoney, ledgerLineNetCents } from '@/lib/settlement';
+import {
+  balancingNetCents,
+  formatNetDraft,
+  formatSignedMoney,
+  ledgerLineNetCents,
+  netCentsToLedgerLine,
+  parseNetDraft,
+} from '@/lib/settlement';
 import { useTripStore } from '@/storage/store';
-import type { LedgerLine, Person } from '@/models/types';
+import type { Person } from '@/models/types';
 import { colors, fontSize, radii, space, type } from '@/theme/tokens';
 
 type Mode = 'split' | 'transfer' | 'ledger';
-type DraftLine = { buyIn: string; cashOut: string };
-
-function parseAmount(text: string): number | null {
-  const t = text.trim().replace(/,/g, '');
-  if (t === '') return 0;
-  const n = Number(t);
-  if (!Number.isFinite(n) || n < 0) return null;
-  return Math.round(n * 100) / 100;
-}
 
 export default function ExpenseFormScreen() {
   const { id, expenseId } = useLocalSearchParams<{ id: string; expenseId?: string }>();
@@ -70,11 +69,11 @@ export default function ExpenseFormScreen() {
       ? existing.toId
       : trip?.people[1]?.id ?? trip?.people[0]?.id ?? '',
   );
-  const [ledger, setLedger] = useState<Record<string, DraftLine>>(() => {
-    const init: Record<string, DraftLine> = {};
+  const [ledger, setLedger] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
     if (existing?.type === 'ledger') {
       for (const line of existing.lines) {
-        init[line.personId] = { buyIn: String(line.buyIn), cashOut: String(line.cashOut) };
+        init[line.personId] = formatNetDraft(ledgerLineNetCents(line));
       }
     }
     return init;
@@ -108,38 +107,40 @@ export default function ExpenseFormScreen() {
     );
   };
 
-  const setLine = (pid: string, patch: Partial<DraftLine>) => {
-    setLedger((prev) => {
-      const cur = prev[pid] ?? { buyIn: '', cashOut: '' };
-      return { ...prev, [pid]: { ...cur, ...patch } };
-    });
+  const setNet = (pid: string, text: string) => {
+    setLedger((prev) => ({ ...prev, [pid]: text }));
   };
 
   const ledgerPreview = (() => {
-    let buyInCents = 0;
-    let cashOutCents = 0;
-    let invalid = false;
-    let active = 0;
-    let nonzero = 0;
-    const lines: LedgerLine[] = [];
-    for (const person of ledgerPeople) {
-      const draft = ledger[person.id] ?? { buyIn: '', cashOut: '' };
-      if (draft.buyIn.trim() === '' && draft.cashOut.trim() === '') continue;
-      const buyIn = parseAmount(draft.buyIn);
-      const cashOut = parseAmount(draft.cashOut);
-      if (buyIn === null || cashOut === null) {
-        invalid = true;
-        continue;
+    const drafts = ledgerPeople.map((person) => ({
+      person,
+      draft: parseNetDraft(ledger[person.id] ?? ''),
+    }));
+    const blocked = drafts.some((row) => row.draft.kind === 'invalid' || row.draft.kind === 'partial');
+    const balance = blocked
+      ? null
+      : balancingNetCents(
+          drafts.map((row) => ({
+            id: row.person.id,
+            cents: row.draft.kind === 'value' ? row.draft.cents : null,
+          })),
+        );
+    const lines = drafts.flatMap((row) => {
+      if (balance && row.person.id === balance.id) {
+        return [netCentsToLedgerLine(row.person.id, balance.cents)];
       }
-      if (buyIn === 0 && cashOut === 0) continue;
-      active += 1;
-      const net = ledgerLineNetCents({ buyIn, cashOut });
-      if (net !== 0) nonzero += 1;
-      buyInCents += Math.round(buyIn * 100);
-      cashOutCents += Math.round(cashOut * 100);
-      lines.push({ personId: person.id, buyIn, cashOut });
-    }
-    return { buyInCents, cashOutCents, invalid, active, nonzero, lines };
+      if (row.draft.kind !== 'value') return [];
+      return [netCentsToLedgerLine(row.person.id, row.draft.cents)];
+    });
+    const sumCents = lines.reduce((sum, line) => sum + ledgerLineNetCents(line), 0);
+    return {
+      drafts,
+      blocked,
+      balance,
+      lines,
+      sumCents,
+      nonzero: lines.filter((line) => ledgerLineNetCents(line) !== 0).length,
+    };
   })();
 
   const saveLedger = () => {
@@ -147,18 +148,16 @@ export default function ExpenseFormScreen() {
       showAlert('請填項目', '例如：晚上第一場');
       return;
     }
-    if (ledgerPreview.invalid) {
-      showAlert('金額無效', '買入與帶出請填 0 以上的數字。');
+    if (ledgerPreview.blocked) {
+      showAlert('金額無效', '淨額請填數字，贏填正的、輸填負的。');
       return;
     }
-    if (ledgerPreview.active < 2) {
-      showAlert('人數不足', '至少兩人上場。沒打的人兩格留空。');
+    if (ledgerPreview.lines.length < 2) {
+      showAlert('人數不足', '至少兩人上場。沒打的人留空。');
       return;
     }
-    if (ledgerPreview.buyInCents !== ledgerPreview.cashOutCents) {
-      const gap = Math.abs(ledgerPreview.cashOutCents - ledgerPreview.buyInCents) / 100;
-      const which = ledgerPreview.cashOutCents > ledgerPreview.buyInCents ? '帶出比買入多' : '買入比帶出多';
-      showAlert('籌碼還沒平', `${which} ${formatMoney(gap)}。`);
+    if (ledgerPreview.sumCents !== 0) {
+      showAlert('還沒平', `還差 ${formatSignedMoney(-ledgerPreview.sumCents / 100)}。再填一個人就會自動補上。`);
       return;
     }
     if (ledgerPreview.nonzero < 1) {
@@ -252,9 +251,7 @@ export default function ExpenseFormScreen() {
       ? '餐費、飲料、檯費：誰墊、誰分攤'
       : mode === 'transfer'
         ? '代買個人物品：誰應付給誰'
-        : '這一場的買入與帶出。淨額＝帶出−買入，加總必須為 0';
-
-  const chipGap = ledgerPreview.cashOutCents - ledgerPreview.buyInCents;
+        : '每人填這一場的淨額。只剩一個人沒填時會自動補平。沒打的人留空；打平請填 0';
 
   return (
     <ScreenWash>
@@ -293,47 +290,44 @@ export default function ExpenseFormScreen() {
         {mode === 'ledger' ? (
           <>
             <Text style={styles.tally}>
-              買入 {formatMoney(ledgerPreview.buyInCents / 100)} · 帶出{' '}
-              {formatMoney(ledgerPreview.cashOutCents / 100)} ·{' '}
-              {ledgerPreview.invalid
-                ? '金額格式不對'
-                : chipGap === 0
-                  ? '已平'
-                  : formatSignedMoney(chipGap / 100)}
+              {ledgerPreview.blocked
+                ? '有一格還沒填好'
+                : ledgerPreview.balance
+                  ? `已補 ${ledgerPeople.find((p) => p.id === ledgerPreview.balance?.id)?.name ?? ''} ${formatSignedMoney(ledgerPreview.balance.cents / 100)}`
+                  : ledgerPreview.sumCents === 0 && ledgerPreview.lines.length > 0
+                    ? '已平'
+                    : ledgerPreview.lines.length > 0
+                      ? `還差 ${formatSignedMoney(-ledgerPreview.sumCents / 100)}`
+                      : '填淨額'}
             </Text>
-            {ledgerPeople.map((person) => {
-              const draft = ledger[person.id] ?? { buyIn: '', cashOut: '' };
-              const buyIn = parseAmount(draft.buyIn);
-              const cashOut = parseAmount(draft.cashOut);
-              const blank = draft.buyIn.trim() === '' && draft.cashOut.trim() === '';
-              const netText =
-                blank || buyIn === null || cashOut === null
-                  ? '—'
-                  : formatSignedMoney(ledgerLineNetCents({ buyIn, cashOut }) / 100);
+            {ledgerPreview.drafts.map(({ person, draft }) => {
+              const isAuto = ledgerPreview.balance?.id === person.id;
+              const cents = isAuto
+                ? ledgerPreview.balance?.cents
+                : draft.kind === 'value'
+                  ? draft.cents
+                  : null;
+              const shown = isAuto && ledgerPreview.balance
+                ? formatNetDraft(ledgerPreview.balance.cents)
+                : (ledger[person.id] ?? '');
               return (
                 <View key={person.id} style={styles.ledgerCard}>
                   <View style={styles.ledgerHead}>
                     <Text style={styles.ledgerName}>{person.name}</Text>
-                    <Text style={styles.ledgerNet}>{netText}</Text>
+                    <Text style={styles.ledgerNet}>
+                      {cents === null || cents === undefined ? '—' : formatSignedMoney(cents / 100)}
+                    </Text>
+                    {isAuto ? <Text style={styles.autoTag}>自動</Text> : null}
                   </View>
-                  <View style={styles.ledgerInputs}>
-                    <TextInput
-                      value={draft.buyIn}
-                      onChangeText={(buyInText) => setLine(person.id, { buyIn: buyInText })}
-                      placeholder="買入"
-                      placeholderTextColor={colors.textFaint}
-                      keyboardType="decimal-pad"
-                      style={styles.ledgerInput}
-                    />
-                    <TextInput
-                      value={draft.cashOut}
-                      onChangeText={(cashOutText) => setLine(person.id, { cashOut: cashOutText })}
-                      placeholder="帶出"
-                      placeholderTextColor={colors.textFaint}
-                      keyboardType="decimal-pad"
-                      style={styles.ledgerInput}
-                    />
-                  </View>
+                  <TextInput
+                    value={shown}
+                    onChangeText={(text) => setNet(person.id, text)}
+                    placeholder="淨額"
+                    placeholderTextColor={colors.textFaint}
+                    keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
+                    accessibilityLabel={`${person.name} 淨額`}
+                    style={[styles.ledgerInput, isAuto && styles.ledgerInputAuto]}
+                  />
                 </View>
               );
             })}
@@ -453,9 +447,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.ink,
   },
-  ledgerInputs: { flexDirection: 'row', gap: space[2] },
+  autoTag: {
+    fontFamily: type.bodyMed,
+    fontSize: fontSize.xs,
+    color: colors.mint,
+  },
   ledgerInput: {
-    flex: 1,
     minHeight: 44,
     borderRadius: radii.sm,
     backgroundColor: colors.paper,
@@ -465,6 +462,9 @@ const styles = StyleSheet.create({
     fontFamily: type.body,
     fontSize: fontSize.md,
     color: colors.ink,
+  },
+  ledgerInputAuto: {
+    borderColor: colors.mint,
   },
   label: {
     fontFamily: type.bodyMed,

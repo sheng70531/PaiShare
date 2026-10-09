@@ -1,4 +1,4 @@
-import type { Expense, TransferSuggestion } from '../models/types';
+import type { Expense, LedgerLine, TransferSuggestion } from '../models/types';
 
 /** ponytail: money in integer cents; upgrade path = BigInt if amounts exceed Number.MAX_SAFE_INTEGER/100 */
 function toCents(amount: number): number {
@@ -12,6 +12,62 @@ function fromCents(cents: number): number {
 /** Net of one ledger line in cents. Positive means that person should receive. */
 export function ledgerLineNetCents(line: { buyIn: number; cashOut: number }): number {
   return Math.round(line.cashOut * 100) - Math.round(line.buyIn * 100);
+}
+
+/** Store a signed net in the existing buy-in / cash-out pair. */
+export function netCentsToLedgerLine(personId: string, netCents: number): LedgerLine {
+  const amount = Math.abs(netCents) / 100;
+  if (netCents > 0) return { personId, buyIn: 0, cashOut: amount };
+  if (netCents < 0) return { personId, buyIn: amount, cashOut: 0 };
+  return { personId, buyIn: 0, cashOut: 0 };
+}
+
+export function formatNetDraft(cents: number): string {
+  const sign = cents < 0 ? '-' : '';
+  const abs = Math.abs(cents);
+  const whole = Math.trunc(abs / 100);
+  const frac = abs % 100;
+  if (frac === 0) return `${sign}${whole}`;
+  if (frac % 10 === 0) return `${sign}${whole}.${frac / 10}`;
+  return `${sign}${whole}.${String(frac).padStart(2, '0')}`;
+}
+
+export type NetDraft =
+  | { kind: 'empty' }
+  | { kind: 'partial' }
+  | { kind: 'invalid' }
+  | { kind: 'value'; cents: number };
+
+/** Empty means not entered. A lone minus or trailing dot is still being typed. */
+export function parseNetDraft(text: string): NetDraft {
+  const t = text
+    .trim()
+    .replace(/,/g, '')
+    .replace(/＋/g, '+')
+    .replace(/[－−]/g, '-');
+  if (t === '') return { kind: 'empty' };
+  if (/^[+-]?\d+\.$/.test(t) || !/\d/.test(t)) {
+    return /^[+-]?\d*\.?$/.test(t) ? { kind: 'partial' } : { kind: 'invalid' };
+  }
+  if (!/^[+-]?\d+(\.\d+)?$/.test(t)) return { kind: 'invalid' };
+  const cents = Math.round(Number(t) * 100);
+  if (!Number.isFinite(cents)) return { kind: 'invalid' };
+  return { kind: 'value', cents };
+}
+
+/**
+ * When exactly one person is blank and the others don't already sum to 0,
+ * that person is the remainder. A 0 remainder stays blank so a sit-out is not recorded as a push.
+ */
+export function balancingNetCents(
+  entries: { id: string; cents: number | null }[],
+): { id: string; cents: number } | null {
+  const blanks = entries.filter((e) => e.cents === null);
+  const filled = entries.filter((e) => e.cents !== null);
+  if (blanks.length !== 1 || filled.length < 1) return null;
+  const sum = filled.reduce((s, e) => s + (e.cents ?? 0), 0);
+  if (sum === 0) return null;
+  return { id: blanks[0].id, cents: -sum };
 }
 
 /** Apply all expenses → net balance per person in dollars (positive = should receive). */
@@ -108,4 +164,19 @@ export function formatSignedMoney(amount: number): string {
   if (amount > 0) return `+${body}`;
   if (amount < 0) return `−${body}`;
   return body;
+}
+
+/** One line for a group chat. Empty transfers copy as already settled. */
+export function formatSettlementText(
+  title: string,
+  transfers: TransferSuggestion[],
+  nameOf: (id: string) => string,
+): string {
+  const body =
+    transfers.length === 0
+      ? '帳已平'
+      : transfers
+          .map((t) => `${nameOf(t.fromId)}給${nameOf(t.toId)} ${formatMoney(t.amount)}`)
+          .join('、');
+  return title ? `${title}\n${body}` : body;
 }

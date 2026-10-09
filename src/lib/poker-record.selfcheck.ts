@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { summarizePoker } from './poker-record';
+import { pokerSheet, summarizePoker } from './poker-record';
 import { mergeRoster } from './roster';
 import type { Expense, Trip } from '../models/types';
 
@@ -99,6 +99,22 @@ function trip(id: string, people: Trip['people'], expenses: Expense[]): Trip {
     rows.map((r) => r.personId),
     ['a', 'c', 'b'],
   );
+
+  const sheet = pokerSheet(trips, [{ id: 'a', name: '小明' }]);
+  assert.deepEqual(
+    sheet.people.map((p) => p.personId),
+    ['a', 'c', 'b'],
+  );
+  assert.deepEqual(
+    sheet.sessions.map((s) => s.label),
+    ['t1 · 牌', 't2 · 牌', 't2 · 牌'],
+  );
+  assert.equal(sheet.sessions[0].nets.a, 100);
+  assert.equal(sheet.sessions[0].nets.b, -100);
+  assert.equal('c' in sheet.sessions[0].nets, false);
+  assert.equal(sheet.sessions[1].nets.c, -50);
+  assert.equal(sheet.sessions[2].nets.a, 0);
+  assert.equal(sheet.people[0].net, 150);
 }
 
 {
