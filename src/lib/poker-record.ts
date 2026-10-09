@@ -36,16 +36,22 @@ export function summarizePoker(trips: Trip[], roster: Person[]): PokerSummary[] 
   const out: PokerSummary[] = [];
   for (const [personId, { name, nets }] of byId) {
     const netCents = nets.reduce((sum, n) => sum + n, 0);
+    const winNets = nets.filter((n) => n > 0);
+    const lossNets = nets.filter((n) => n < 0);
+    const wins = winNets.length;
+    const losses = lossNets.length;
+    const best = winNets.length ? Math.max(...winNets) / 100 : 0;
+    const worst = lossNets.length ? Math.min(...lossNets) / 100 : 0;
     out.push({
       personId,
       name,
       sessions: nets.length,
-      wins: nets.filter((n) => n > 0).length,
-      losses: nets.filter((n) => n < 0).length,
+      wins,
+      losses,
       pushes: nets.filter((n) => n === 0).length,
       net: netCents / 100,
-      best: Math.max(...nets) / 100,
-      worst: Math.min(...nets) / 100,
+      best,
+      worst,
     });
   }
 

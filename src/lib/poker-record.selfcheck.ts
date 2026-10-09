@@ -90,6 +90,8 @@ function trip(id: string, people: Trip['people'], expenses: Expense[]): Trip {
   assert.equal(b.net, -100);
   assert.equal(b.sessions, 1);
   assert.equal(b.losses, 1);
+  assert.equal(b.best, 0);
+  assert.equal(b.worst, -100);
   assert.equal(c.name, '小明');
   assert.equal(c.net, -50);
   assert.notEqual(a.personId, c.personId);
@@ -97,6 +99,29 @@ function trip(id: string, people: Trip['people'], expenses: Expense[]): Trip {
     rows.map((r) => r.personId),
     ['a', 'c', 'b'],
   );
+}
+
+{
+  const onlyWin = summarizePoker(
+    [
+      trip(
+        't',
+        [{ id: 'a', name: 'A' }],
+        [
+          {
+            id: '1',
+            type: 'ledger',
+            title: '牌',
+            createdAt: '',
+            lines: [{ personId: 'a', buyIn: 0, cashOut: 600 }],
+          },
+        ],
+      ),
+    ],
+    [],
+  );
+  assert.equal(onlyWin[0].best, 600);
+  assert.equal(onlyWin[0].worst, 0);
 }
 
 {
