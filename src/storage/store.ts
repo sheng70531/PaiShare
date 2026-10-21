@@ -9,9 +9,11 @@ import type {
   TransferExpense,
   LedgerExpense,
   Trip,
+  WindDraw,
 } from '../models/types';
 import { tripAfterRemovingPerson } from '../lib/remove-person';
 import { mergeRoster } from '../lib/roster';
+import { normalizeWindDraw } from '../lib/wind-seats';
 
 const STORAGE_KEY = 'paishare-v1';
 
@@ -45,6 +47,7 @@ type TripStore = {
   deleteExpense: (tripId: string, expenseId: string) => void;
   setSettlementMarks: (tripId: string, marks: SettlementMark[]) => void;
   toggleSettlementPaid: (tripId: string, fromId: string, toId: string, amount: number) => void;
+  setWindDraw: (tripId: string, draw: WindDraw) => void;
   getTrip: (tripId: string) => Trip | undefined;
 };
 
@@ -143,9 +146,28 @@ export const useTripStore = create<TripStore>()(
           trips: s.trips.map((t) => {
             if (t.id !== tripId) return t;
             const next = tripAfterRemovingPerson(t, personId);
-            return next ? { ...next, updatedAt: nowIso() } : t;
+            if (!next) return t;
+            if (next.windDraw?.order.includes(personId)) {
+              const rest = { ...next };
+              delete rest.windDraw;
+              return { ...rest, updatedAt: nowIso() };
+            }
+            return { ...next, updatedAt: nowIso() };
           }),
         })),
+
+      setWindDraw: (tripId, draw) => {
+        const trip = get().trips.find((t) => t.id === tripId);
+        if (!trip) return;
+        const windDraw = normalizeWindDraw(
+          draw,
+          trip.people.map((p) => p.id),
+        );
+        if (!windDraw) return;
+        set((s) => ({
+          trips: mapTrip(s.trips, tripId, (t) => ({ ...t, windDraw })),
+        }));
+      },
 
       addExpense: (tripId, expense) =>
         set((s) => ({
