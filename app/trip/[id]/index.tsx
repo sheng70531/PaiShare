@@ -18,6 +18,7 @@ import { PersonPicker } from '@/components/PersonPicker';
 import { ScreenWash } from '@/components/ScreenWash';
 import { showAlert } from '@/lib/alert';
 import { impactOfRemovingPerson } from '@/lib/remove-person';
+import { eastPersonId } from '@/lib/wind-seats';
 import { useTripStore } from '@/storage/store';
 import type { Expense, Person } from '@/models/types';
 import { colors, fontSize, radii, space, type } from '@/theme/tokens';
@@ -58,6 +59,8 @@ export default function TripDetailScreen() {
   }
 
   const available = roster.filter((p) => !trip.people.some((m) => m.id === p.id));
+  const eastId = trip.windDraw ? eastPersonId(trip.windDraw) : undefined;
+  const eastName = eastId ? trip.people.find((p) => p.id === eastId)?.name : undefined;
 
   const onAddPerson = () => {
     const personId = addClassmate(newName);
@@ -268,6 +271,12 @@ export default function TripDetailScreen() {
                 style={{ flex: 1 }}
               />
             </View>
+            <Button
+              label="抓風位"
+              variant="secondary"
+              onPress={() => router.push(`/trip/${trip.id}/winds`)}
+            />
+            {eastName ? <Text style={styles.eastLine}>東：{eastName}</Text> : null}
 
             <Text style={styles.section}>支出</Text>
             {trip.expenses.length === 0 ? (
@@ -397,6 +406,12 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
   },
   actions: { flexDirection: 'row', gap: space[3] },
+  eastLine: {
+    fontFamily: type.bodySemi,
+    fontSize: fontSize.sm,
+    color: colors.mint,
+    textAlign: 'center',
+  },
   empty: {
     fontFamily: type.body,
     fontSize: fontSize.sm,

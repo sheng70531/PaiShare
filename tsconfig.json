@@ -16,6 +16,7 @@
     "src/lib/settlement.selfcheck.ts",
     "src/lib/remove-person.selfcheck.ts",
     "src/lib/poker-record.selfcheck.ts",
+    "src/lib/wind-seats.selfcheck.ts",
     "node_modules",
     ".venv"
   ]

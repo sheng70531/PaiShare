@@ -77,6 +77,7 @@ export default function RootLayout() {
         <Stack.Screen name="trip/[id]/index" options={{ title: '行程' }} />
         <Stack.Screen name="trip/[id]/expense" options={{ title: '記一筆' }} />
         <Stack.Screen name="trip/[id]/settle" options={{ title: '結算' }} />
+        <Stack.Screen name="trip/[id]/winds" options={{ title: '抓風位' }} />
       </Stack>
     </GestureHandlerRootView>
   );

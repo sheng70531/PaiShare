@@ -46,6 +46,21 @@ export type SettlementMark = {
   paid: boolean;
 };
 
+export const WINDS = ['東', '南', '西', '北'] as const;
+export type Wind = (typeof WINDS)[number];
+
+export type WindSeat = {
+  personId: string;
+  wind: Wind;
+};
+
+/** order: 擲骰者、下家、對家、上家。dice: 三顆骰。seats: 每人抽到的風。 */
+export type WindDraw = {
+  order: string[];
+  dice: [number, number, number];
+  seats: WindSeat[];
+};
+
 export type Trip = {
   id: string;
   title: string;
@@ -54,6 +69,7 @@ export type Trip = {
   people: Person[];
   expenses: Expense[];
   settlementMarks: SettlementMark[];
+  windDraw?: WindDraw;
 };
 
 export type TransferSuggestion = {
