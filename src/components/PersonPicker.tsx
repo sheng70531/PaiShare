@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressScale } from './PressScale';
 import type { Person } from '../models/types';
 import { colors, fontSize, radii, space, type } from '../theme/tokens';
 
@@ -16,7 +17,7 @@ export function PersonPicker({ people, selectedIds, onToggle, onLongPress, multi
       {people.map((p) => {
         const on = selectedIds.includes(p.id);
         return (
-          <Pressable
+          <PressScale
             key={p.id}
             accessibilityRole={multi ? 'checkbox' : 'radio'}
             accessibilityState={{ checked: on }}
@@ -24,9 +25,10 @@ export function PersonPicker({ people, selectedIds, onToggle, onLongPress, multi
             onPress={() => onToggle(p.id)}
             onLongPress={onLongPress ? () => onLongPress(p.id) : undefined}
             style={[styles.chip, on && styles.chipOn]}
+            pressedScale={0.94}
           >
             <Text style={[styles.chipText, on && styles.chipTextOn]}>{p.name}</Text>
-          </Pressable>
+          </PressScale>
         );
       })}
     </View>
@@ -44,14 +46,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     borderRadius: radii.pill,
     borderWidth: 1.5,
-    borderColor: colors.line,
+    borderColor: colors.brassBright,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chipOn: {
     backgroundColor: colors.ink,
-    borderColor: colors.ink,
+    borderColor: colors.brassBright,
   },
   chipText: {
     fontFamily: type.bodyMed,

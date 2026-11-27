@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressScale } from './PressScale';
 import type { Expense, Person } from '../models/types';
 import { formatMoney, ledgerLineNetCents } from '../lib/settlement';
 import { colors, fontSize, radii, space, type } from '../theme/tokens';
@@ -30,11 +31,7 @@ export function ExpenseRow({ expense, peopleById, onPress }: Props) {
   }
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-    >
+    <PressScale accessibilityRole="button" onPress={onPress} style={styles.row}>
       <View style={styles.left}>
         <View
           style={[
@@ -56,7 +53,7 @@ export function ExpenseRow({ expense, peopleById, onPress }: Props) {
         </Text>
       </View>
       <Text style={styles.amount}>{formatMoney(amount)}</Text>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -70,9 +67,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.brassBright,
   },
-  pressed: { opacity: 0.9 },
   left: { flex: 1, gap: 4 },
   badge: {
     alignSelf: 'flex-start',
@@ -89,7 +85,7 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
   },
   title: {
-    fontFamily: type.bodySemi,
+    fontFamily: type.brandSoft,
     fontSize: fontSize.md,
     color: colors.ink,
   },
@@ -99,8 +95,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   amount: {
-    fontFamily: type.bodyBold,
+    fontFamily: type.brandSoft,
     fontSize: fontSize.lg,
-    color: colors.ink,
+    color: colors.brass,
   },
 });

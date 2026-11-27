@@ -1,5 +1,4 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenWash } from '@/components/ScreenWash';
 import { formatSignedMoney } from '@/lib/settlement';
 import { pokerSheet, summarizePoker } from '@/lib/poker-record';
@@ -13,7 +12,6 @@ function netColor(amount: number): string {
 }
 
 export default function StatsScreen() {
-  const insets = useSafeAreaInsets();
   const trips = useTripStore((s) => s.trips);
   const roster = useTripStore((s) => s.roster);
   const rows = summarizePoker(trips, roster);
@@ -24,7 +22,7 @@ export default function StatsScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.list,
-          { paddingBottom: insets.bottom + space[6] },
+          { paddingBottom: space[5] },
           rows.length === 0 && styles.emptyWrap,
         ]}
       >
@@ -116,14 +114,15 @@ const styles = StyleSheet.create({
   section: {
     fontFamily: type.bodySemi,
     fontSize: fontSize.sm,
-    color: colors.textMuted,
+    letterSpacing: 2,
+    color: colors.brass,
     marginTop: space[2],
   },
   table: {
     borderRadius: radii.lg,
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.brassBright,
     overflow: 'hidden',
   },
   tr: {
@@ -168,7 +167,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.brassBright,
     gap: space[1],
   },
   head: {
@@ -178,7 +177,7 @@ const styles = StyleSheet.create({
     gap: space[3],
   },
   name: {
-    fontFamily: type.bodySemi,
+    fontFamily: type.brandSoft,
     fontSize: fontSize.lg,
     color: colors.ink,
     flex: 1,

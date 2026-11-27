@@ -10,7 +10,6 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { PersonPicker } from '@/components/PersonPicker';
 import { ScreenWash } from '@/components/ScreenWash';
@@ -678,7 +677,6 @@ export default function WindsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const trip = useTripStore((s) => s.trips.find((t) => t.id === id));
   const setWindDraw = useTripStore((s) => s.setWindDraw);
-  const insets = useSafeAreaInsets();
   const saved =
     trip?.windDraw &&
     trip.windDraw.order.every((pid) => trip.people.some((p) => p.id === pid))
@@ -720,7 +718,7 @@ export default function WindsScreen() {
   return (
     <ScreenWash>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + space[6] }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: space[5] }]}
       >
         {trip.people.length < 4 ? (
           <Text style={styles.status}>坐桌要四個人</Text>

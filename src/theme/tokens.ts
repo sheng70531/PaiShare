@@ -1,20 +1,22 @@
-/** PaiShare design tokens — ink + mint settle theme */
+/** PaiShare design tokens — ink, ivory, and brass */
 export const colors = {
   ink: '#1A2421',
   inkSoft: '#2C3A35',
   mist: '#E7EFEC',
-  paper: '#F4F8F6',
-  paperDeep: '#D5E4DE',
+  paper: '#F6F1E6',
+  paperDeep: '#E6D7BE',
   mint: '#1F8A7A',
   mintBright: '#2BB39F',
   mintMuted: '#A8D5CC',
+  brass: '#8C6A2F',
+  brassBright: '#C6A15B',
   coral: '#D65A4A',
   amber: '#C9892A',
-  white: '#FFFFFF',
-  line: 'rgba(26, 36, 33, 0.12)',
+  white: '#FFFCF7',
+  line: 'rgba(140, 106, 47, 0.38)',
   textMuted: 'rgba(26, 36, 33, 0.58)',
   textFaint: 'rgba(26, 36, 33, 0.38)',
-  overlay: 'rgba(26, 36, 33, 0.04)',
+  overlay: 'rgba(140, 106, 47, 0.08)',
 } as const;
 
 export const space = {

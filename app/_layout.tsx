@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomBar } from '@/components/BottomBar';
 import { useTripStore } from '@/storage/store';
 import { colors, type } from '@/theme/tokens';
 
@@ -55,13 +56,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.flex}>
       <StatusBar style="dark" />
+      <View style={styles.flex}>
       <Stack
         screenOptions={({ navigation }) => ({
           headerShadowVisible: false,
           headerTintColor: colors.ink,
           headerStyle: { backgroundColor: colors.paper },
           headerTitleStyle: {
-            fontFamily: type.bodySemi,
+            fontFamily: type.brandSoft,
             color: colors.ink,
           },
           contentStyle: { backgroundColor: colors.paper },
@@ -79,6 +81,8 @@ export default function RootLayout() {
         <Stack.Screen name="trip/[id]/settle" options={{ title: '結算' }} />
         <Stack.Screen name="trip/[id]/winds" options={{ title: '抓風位' }} />
       </Stack>
+      </View>
+      <BottomBar />
     </GestureHandlerRootView>
   );
 }

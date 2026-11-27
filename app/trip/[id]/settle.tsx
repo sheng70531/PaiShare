@@ -1,15 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Clipboard,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Clipboard, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
+import { PressScale } from '@/components/PressScale';
 import { ScreenWash } from '@/components/ScreenWash';
 import { formatMoney, formatSettlementText, settleTrip } from '@/lib/settlement';
 import { useTripStore } from '@/storage/store';
@@ -36,7 +29,6 @@ export default function SettleScreen() {
   const setSettlementMarks = useTripStore((s) => s.setSettlementMarks);
   const toggleSettlementPaid = useTripStore((s) => s.toggleSettlementPaid);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [copied, setCopied] = useState(false);
 
   // depend on people/expenses refs only — toggling paid must not recompute
@@ -104,7 +96,7 @@ export default function SettleScreen() {
         keyExtractor={(t) => `${t.fromId}-${t.toId}-${t.amount}`}
         contentContainerStyle={[
           styles.list,
-          { paddingBottom: insets.bottom + space[6] },
+          { paddingBottom: space[5] },
         ]}
         ListHeaderComponent={
           <View style={styles.header}>
@@ -134,7 +126,7 @@ export default function SettleScreen() {
         renderItem={({ item }) => {
           const paid = isPaid(item);
           return (
-            <Pressable
+            <PressScale
               accessibilityRole="button"
               accessibilityState={{ checked: paid }}
               onPress={() =>
@@ -153,7 +145,7 @@ export default function SettleScreen() {
               <Text style={[styles.amount, paid && styles.paidText]}>
                 {formatMoney(item.amount)}
               </Text>
-            </Pressable>
+            </PressScale>
           );
         }}
         ItemSeparatorComponent={() => <View style={{ height: space[3] }} />}
@@ -166,8 +158,9 @@ const styles = StyleSheet.create({
   list: { padding: space[5], gap: space[3] },
   header: { gap: space[3], marginBottom: space[3] },
   brandLine: {
-    fontFamily: type.brandSoft,
+    fontFamily: type.brand,
     fontSize: fontSize.xl,
+    letterSpacing: 0.4,
     color: colors.ink,
   },
   lead: {
@@ -200,7 +193,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     backgroundColor: colors.white,
     borderWidth: 1.5,
-    borderColor: colors.line,
+    borderColor: colors.brassBright,
     gap: space[3],
   },
   rowPaid: {
@@ -220,9 +213,9 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
   },
   amount: {
-    fontFamily: type.bodyBold,
+    fontFamily: type.brandSoft,
     fontSize: fontSize.xl,
-    color: colors.ink,
+    color: colors.brass,
   },
   paidText: { color: colors.mint },
   missing: {

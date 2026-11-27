@@ -17,6 +17,7 @@
     "src/lib/remove-person.selfcheck.ts",
     "src/lib/poker-record.selfcheck.ts",
     "src/lib/wind-seats.selfcheck.ts",
+    "src/lib/keyboard-lift.selfcheck.ts",
     "node_modules",
     ".venv"
   ]
