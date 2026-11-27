@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Field } from '@/components/Field';
 import { PersonPicker } from '@/components/PersonPicker';
@@ -11,7 +10,6 @@ import { useTripStore } from '@/storage/store';
 import { colors, fontSize, space, type } from '@/theme/tokens';
 
 export default function NewTripScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const roster = useTripStore((s) => s.roster);
   const addClassmate = useTripStore((s) => s.addClassmate);
@@ -70,7 +68,7 @@ export default function NewTripScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: insets.bottom + space[6] },
+          { paddingBottom: space[5] },
         ]}
         keyboardShouldPersistTaps="handled"
       >

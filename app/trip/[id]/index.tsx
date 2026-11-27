@@ -10,8 +10,8 @@ import {
   View,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
+import { PressScale } from '@/components/PressScale';
 import { ExpenseRow } from '@/components/ExpenseRow';
 import { Field } from '@/components/Field';
 import { PersonPicker } from '@/components/PersonPicker';
@@ -34,7 +34,6 @@ export default function TripDetailScreen() {
   const updateTripTitle = useTripStore((s) => s.updateTripTitle);
   const deleteTrip = useTripStore((s) => s.deleteTrip);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [newName, setNewName] = useState('');
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameText, setRenameText] = useState('');
@@ -157,7 +156,7 @@ export default function TripDetailScreen() {
         keyExtractor={(e) => e.id}
         contentContainerStyle={[
           styles.list,
-          { paddingBottom: insets.bottom + 100 },
+          { paddingBottom: space[6] },
         ]}
         ListHeaderComponent={
           <View style={styles.header}>
@@ -201,15 +200,16 @@ export default function TripDetailScreen() {
               <Text style={styles.section}>成員</Text>
               <View style={styles.peopleRow}>
                 {trip.people.map((p) => (
-                  <Pressable
+                  <PressScale
                     key={p.id}
                     accessibilityRole="button"
                     accessibilityHint="長按可移除成員"
                     onLongPress={() => onRemovePerson(p)}
                     style={styles.personChip}
+                    pressedScale={0.94}
                   >
                     <Text style={styles.personText}>{p.name}</Text>
-                  </Pressable>
+                  </PressScale>
                 ))}
               </View>
               {available.length > 0 ? (
@@ -330,8 +330,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: radii.md,
     backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.line,
+    borderWidth: 1.5,
+    borderColor: colors.brassBright,
     paddingHorizontal: space[3],
     fontFamily: type.bodySemi,
     fontSize: fontSize.md,
@@ -359,14 +359,17 @@ const styles = StyleSheet.create({
   section: {
     fontFamily: type.bodySemi,
     fontSize: fontSize.sm,
-    color: colors.textMuted,
+    letterSpacing: 2,
+    color: colors.brass,
   },
   peopleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   personChip: {
     minHeight: 40,
     paddingHorizontal: space[3],
     borderRadius: radii.pill,
-    backgroundColor: colors.mist,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.brassBright,
     justifyContent: 'center',
   },
   personText: {
@@ -380,8 +383,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: radii.md,
     backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.line,
+    borderWidth: 1.5,
+    borderColor: colors.brassBright,
     paddingHorizontal: space[3],
     fontFamily: type.body,
     color: colors.ink,
@@ -407,9 +410,9 @@ const styles = StyleSheet.create({
   },
   actions: { flexDirection: 'row', gap: space[3] },
   eastLine: {
-    fontFamily: type.bodySemi,
-    fontSize: fontSize.sm,
-    color: colors.mint,
+    fontFamily: type.brandSoft,
+    fontSize: fontSize.md,
+    color: colors.brass,
     textAlign: 'center',
   },
   empty: {

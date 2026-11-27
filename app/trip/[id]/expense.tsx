@@ -9,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Field } from '@/components/Field';
 import { PersonPicker } from '@/components/PersonPicker';
@@ -37,7 +36,6 @@ export default function ExpenseFormScreen() {
   const updateExpense = useTripStore((s) => s.updateExpense);
   const deleteExpense = useTripStore((s) => s.deleteExpense);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
   const existing = useMemo(
     () => trip?.expenses.find((e) => e.id === expenseId),
@@ -259,7 +257,7 @@ export default function ExpenseFormScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: insets.bottom + space[6] },
+          { paddingBottom: space[5] },
         ]}
         keyboardShouldPersistTaps="handled"
       >
@@ -394,6 +392,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.mist,
     borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.brassBright,
     padding: 4,
   },
   modeBtn: {
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.brassBright,
   },
   ledgerHead: {
     flexDirection: 'row',
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     backgroundColor: colors.paper,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.brassBright,
     paddingHorizontal: space[3],
     fontFamily: type.body,
     fontSize: fontSize.md,
